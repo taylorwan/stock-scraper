@@ -1,6 +1,5 @@
 # imports
 from bs4 import BeautifulSoup
-from urllib2 import urlopen
 import urllib
 import requests
 
@@ -10,7 +9,6 @@ base = 'https://finance.yahoo.com/q/hp?s='
 
 # load beautiful soup
 def make_soup(url):
-    # html = urlopen(url).read()
     html = requests.get(url)
     return BeautifulSoup(html.text)
 
@@ -18,12 +16,11 @@ def make_soup(url):
 # given a ticker, find the url to its historical data
 def get_data_link(ticker):
     url = base + ticker
-    print url
     soup = make_soup(url)
     for a in soup.find_all('a'):
         if a.text == 'Download to Spreadsheet':
             return a.get('href')
-    return -1
+    raise Exception("Invalid Ticker")
 
 
 # download the file at a particular link
@@ -34,8 +31,15 @@ def download_file(url, filename='downloaded.csv'):
 
 # given a ticker, load the data into a 2D array
 def get_data(ticker):
+
+    # try and get a link for ticker
+    try:
+        url = get_data_link(ticker)
+    except Exception as e:
+        print e.args[0]
+        return -1
+
     # download file
-    url = get_data_link(ticker)
     fileName = ticker + '.csv'
     download_file(url, fileName)
 
@@ -51,17 +55,24 @@ def get_data(ticker):
     return data
 
 
-def print_array(d):
-    lenControl = 8
+# helper for aligning columns
+def pretty_print(s, lenControl):
+    if len(str(s)) < lenControl:
+        return str(s) + '\t\t'
+    return str(s) + '\t'
+
+
+# print the array, with variable tab width
+def print_array(d, lenControl=8):
+    output = ''
     for r in d:
-        output = ''
+        if r == '':
+            continue
         for c in r:
-            cur = str(c)
-            output += cur + '\t'
-            # dif = lenControl -
-            if len(str(c)) < lenControl:
-                output += '\t'
-        print output
+            output += pretty_print(c, lenControl)
+        output += '\n'
+    print output
+
 
 if __name__ == '__main__':
     data = get_data('AAPL')
